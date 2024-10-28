@@ -1,5 +1,5 @@
-# ShipFast — Typescript
 
+<<<<<<< HEAD
 Hey maker 👋 it's Marc from [ShipFast](https://shipfa.st/docs). Let's get your startup off the ground, FAST ⚡️
 
 <sub>**Watch/Star the repo to be notified when updates are pushed**</sub>
@@ -34,3 +34,5 @@ P.S.
 -   Make your launch go viral and get your first customers with [LaunchViral](https://launchvir.al/?ref=shipfast_readme) 🚀
 -   Stop paying 0.4% per Stripe invoices [Zenvoice](https://zenvoice.io/?ref=shipfast_readme) 🤕
 # Linkty
+=======
+>>>>>>> cbb3f027ad77f25db8c24a8f46d9605e338a1d5e
