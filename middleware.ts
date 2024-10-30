@@ -77,7 +77,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/404`);
     }
 
-    const clickParams = prepareClickParams(request, linkData);
+    const clickParams = await prepareClickParams(request, linkData);
     await recordClick(supabase, clickParams);
 
     // Redirect to the original URL
@@ -112,10 +112,13 @@ async function fetchLinkData(supabase: any, shortCode: string) {
 }
 
 function prepareClickParams(request: NextRequest, linkData: any) {
-  const parser = new UAParser(request.headers.get("user-agent"));
-  const deviceType = parser.getDevice().type || "unknown";
-  const os = parser.getOS().name || "unknown";
-  const browser = parser.getBrowser().name || "unknown";
+  const userAgent = request.headers.get("user-agent") || "";
+  const parser = new UAParser(userAgent);
+  const parsedResult = parser.getResult();
+
+  const deviceType = getDeviceType(parsedResult);
+  const os = parsedResult.os.name || "unknown";
+  const browser = parsedResult.browser.name || "unknown";
 
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0] ||
@@ -130,18 +133,81 @@ function prepareClickParams(request: NextRequest, linkData: any) {
     detected_ip: ip,
   });
 
+  const visitorId = generateVisitorId(ip, userAgent);
+
   return {
     p_link_id: linkData.id,
     p_referrer: request.headers.get("referer") || null,
     p_ip_address: ip,
-    p_user_agent: request.headers.get("user-agent") || null,
+    p_user_agent: userAgent,
     p_device_type: deviceType,
     p_operating_system: os,
     p_browser: browser,
     p_click_type: "direct",
     p_latitude: null,
     p_longitude: null,
+    p_visitor_id: visitorId,
   };
+}
+
+function getDeviceType(parsedResult: UAParser.IResult): string {
+  const deviceType = parsedResult.device.type;
+  const cpuArchitecture = parsedResult.cpu.architecture;
+
+  if (deviceType) {
+    switch (deviceType.toLowerCase()) {
+      case "mobile":
+        return "Smartphone";
+      case "tablet":
+        return "Tablet";
+      case "console":
+        return "Gaming Console";
+      case "smarttv":
+        return "Smart TV";
+      case "wearable":
+        return "Wearable Device";
+      case "embedded":
+        return "Embedded Device";
+    }
+  }
+
+  // If device type is not determined, try to infer from OS or CPU
+  if (parsedResult.os.name) {
+    const osName = parsedResult.os.name.toLowerCase();
+    if (
+      osName.includes("android") ||
+      osName.includes("ios") ||
+      osName.includes("windows phone")
+    ) {
+      return "Smartphone";
+    }
+    if (
+      osName.includes("windows") ||
+      osName.includes("mac") ||
+      osName.includes("linux")
+    ) {
+      return cpuArchitecture === "arm" ? "Tablet" : "Desktop";
+    }
+  }
+
+  return "Unknown";
+}
+
+function generateVisitorId(ip: string, userAgent: string): string {
+  const timestamp = Date.now().toString(36);
+  const ipHash = hashCode(ip).toString(36);
+  const uaHash = hashCode(userAgent).toString(36);
+  return `${timestamp}-${ipHash}-${uaHash}`;
+}
+
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
 }
 
 async function recordClick(supabase: any, clickParams: any) {
@@ -149,7 +215,7 @@ async function recordClick(supabase: any, clickParams: any) {
   console.log("Function parameters:", clickParams);
 
   const { data: clickData, error: clickError } = await supabase.rpc(
-    "increment_clicks",
+    "increment_clicks_and_visitors",
     clickParams
   );
 
