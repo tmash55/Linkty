@@ -13,15 +13,24 @@ import {
   ArrowUpRight,
   Plus,
   FolderOpen,
+  Users,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { StatCard } from "@/components/folders/StatCard";
 import { CustomBarChart } from "@/components/folders/CustomBarChart";
 import { LinkTable } from "@/components/folders/LinkTable";
 import { OverallClicksChart } from "@/components/analytics/OverallClicksChart";
+import { VisitorMetricsCard } from "@/components/analytics/VisitorMetricsCard";
+
+interface StatsData {
+  clicks: number;
+  visitors: number;
+}
 
 export default function OverviewPage() {
   const [overviewData, setOverviewData] = useState<any>(null);
+  const [visitorMetrics, setVisitorMetrics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
@@ -63,8 +72,31 @@ export default function OverviewPage() {
 
       if (statsError) throw statsError;
 
-      console.log("Fetched stats:", stats); // Log the fetched stats
+      // Fetch visitor metrics for different time periods
+      const timeFrames = [
+        { name: "24h", interval: "24 hours" },
+        { name: "7d", interval: "7 days" },
+        { name: "30d", interval: "30 days" },
+      ];
 
+      const metrics: any = {};
+      for (const frame of timeFrames) {
+        const { data, error } = await supabase.rpc("get_link_metrics", {
+          p_link_id: null,
+          p_time_window: frame.interval,
+        });
+
+        if (error) {
+          console.error(`Error fetching ${frame.name} metrics:`, error);
+          continue;
+        }
+
+        if (data && data[0]) {
+          metrics[frame.name] = data[0];
+        }
+      }
+
+      setVisitorMetrics(metrics);
       setOverviewData({
         links: links || [],
         folders: folders || [],
@@ -107,15 +139,22 @@ export default function OverviewPage() {
     0
   );
 
-  const prepareChartData = (data: Record<string, number>) => {
-    return Object.entries(data || {}).map(([name, value]) => ({ name, value }));
+  const prepareChartData = (
+    data: Record<string, { clicks: number; visitors: number }> | null,
+    metric: "clicks" | "visitors" = "clicks"
+  ) => {
+    if (!data) return [];
+    return Object.entries(data).map(([name, stats]) => ({
+      name,
+      value: stats[metric],
+    }));
   };
 
-  const operatingSystems = prepareChartData(stats.os_stats || {});
-  const browsers = prepareChartData(stats.browser_stats || {});
+  const operatingSystems = prepareChartData(stats.os_stats, "clicks");
+  const operatingSystemsVisitors = prepareChartData(stats.os_stats, "visitors");
+  const browsers = prepareChartData(stats.browser_stats, "clicks");
+  const browsersVisitors = prepareChartData(stats.browser_stats, "visitors");
   const clicksOverTime = stats.clicks_over_time || [];
-
-  console.log("Clicks over time data:", clicksOverTime); // Log the clicks over time data
 
   const topPerformingLink = links.reduce(
     (max: any, link: any) => (link.clicks > (max?.clicks || 0) ? link : max),
@@ -144,7 +183,7 @@ export default function OverviewPage() {
         </div>
       </div>
       <div className="space-y-6">
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard title="Total Links" value={totalLinks} icon={LinkIcon} />
           <StatCard
             title="Total Folders"
@@ -162,6 +201,7 @@ export default function OverviewPage() {
               icon={ArrowUpRight}
             />
           )}
+          {visitorMetrics && <VisitorMetricsCard metrics={visitorMetrics} />}
         </div>
 
         {clicksOverTime.length > 0 ? (
@@ -169,7 +209,7 @@ export default function OverviewPage() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle>Folder Clicks Over Time</CardTitle>
+              <CardTitle>Clicks Over Time</CardTitle>
             </CardHeader>
             <CardContent>
               <p>No click data available for the time chart</p>
@@ -178,8 +218,69 @@ export default function OverviewPage() {
         )}
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-          <CustomBarChart data={operatingSystems} title="Operating Systems" />
-          <CustomBarChart data={browsers} title="Browsers" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Operating Systems</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="clicks">
+                <TabsList className="grid w-full grid-cols-2 h-8 mb-4">
+                  <TabsTrigger value="clicks" className="text-xs">
+                    Clicks
+                  </TabsTrigger>
+                  <TabsTrigger value="visitors" className="text-xs">
+                    Visitors
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="clicks">
+                  <CustomBarChart
+                    data={operatingSystems}
+                    title="Operating Systems"
+                    showVisitors={false}
+                  />
+                </TabsContent>
+                <TabsContent value="visitors">
+                  <CustomBarChart
+                    data={operatingSystemsVisitors}
+                    title="Operating Systems"
+                    showVisitors={true}
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>Browsers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="clicks">
+                <TabsList className="grid w-full grid-cols-2 h-8 mb-4">
+                  <TabsTrigger value="clicks" className="text-xs">
+                    Clicks
+                  </TabsTrigger>
+                  <TabsTrigger value="visitors" className="text-xs">
+                    Visitors
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="clicks">
+                  <CustomBarChart
+                    data={browsers}
+                    title="Browsers"
+                    showVisitors={false}
+                  />
+                </TabsContent>
+                <TabsContent value="visitors">
+                  <CustomBarChart
+                    data={browsersVisitors}
+                    title="Browsers"
+                    showVisitors={true}
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>
