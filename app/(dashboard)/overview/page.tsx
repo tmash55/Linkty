@@ -48,11 +48,23 @@ const timeRanges = [
   { value: "all", label: "All Time" },
 ];
 
+interface Stats {
+  total_clicks: number;
+  os_stats: Record<string, { clicks: number; visitors: number }>;
+  browser_stats: Record<string, { clicks: number; visitors: number }>;
+  clicks_over_time: Array<{ date: string; clicks: number }>;
+}
+
 export default function OverviewPage() {
   const [timeRange, setTimeRange] = useState("30d");
   const [links, setLinks] = useState([]);
   const [folders, setFolders] = useState([]);
-  const [stats, setStats] = useState({});
+  const [stats, setStats] = useState<Stats>({
+    total_clicks: 0,
+    os_stats: {},
+    browser_stats: {},
+    clicks_over_time: [],
+  });
   const [xAxisFormat, setXAxisFormat] = useState("MMM d");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,7 +160,7 @@ export default function OverviewPage() {
     });
 
     if (error) throw error;
-    return data;
+    return data as Stats;
   };
 
   const fetchOverviewData = async () => {
