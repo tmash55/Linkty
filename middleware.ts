@@ -3,6 +3,19 @@ import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/libs/supabase/middleware";
 import UAParser from "ua-parser-js";
 import { parseUserAgent } from "./libs/visitorId";
+interface ClickParams {
+  p_link_id: string;
+  p_referrer: string | null;
+  p_ip_address: string;
+  p_user_agent: string;
+  p_device_type: string;
+  p_operating_system: string;
+  p_browser: string;
+  p_click_type: string;
+  p_latitude: number | null;
+  p_longitude: number | null;
+  p_visitor_id: string;
+}
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
@@ -114,7 +127,19 @@ async function handleShortLink(request: NextRequest, url: URL) {
     const userAgent = request.headers.get("user-agent") || "";
     const { browser, operatingSystem, deviceType } = parseUserAgent(userAgent);
 
-    const clickParams = {
+    const clickParams: {
+      p_link_id: string;
+      p_referrer: string | null;
+      p_ip_address: string;
+      p_user_agent: string;
+      p_device_type: string;
+      p_operating_system: string;
+      p_browser: string;
+      p_click_type: string;
+      p_latitude: number | null;
+      p_longitude: number | null;
+      p_visitor_id: string;
+    } = {
       p_link_id: linkData.id,
       p_referrer: request.headers.get("referer") || null,
       p_ip_address:
@@ -215,7 +240,10 @@ async function fetchLinkData(supabase: any, shortCode: string) {
   return data;
 }
 
-function prepareClickParams(request: NextRequest, linkData: any) {
+function prepareClickParams(
+  request: NextRequest,
+  linkData: { id: string }
+): ClickParams {
   const userAgent = request.headers.get("user-agent") || "";
   const parser = new UAParser(userAgent);
   const parsedResult = parser.getResult();
