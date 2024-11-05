@@ -16,92 +16,165 @@ import {
   Users,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  subDays,
+  subMonths,
+  startOfYear,
+  subYears,
+  parseISO,
+  isWithinInterval,
+} from "date-fns";
 
 import { StatCard } from "@/components/folders/StatCard";
 import { CustomBarChart } from "@/components/folders/CustomBarChart";
 import { LinkTable } from "@/components/folders/LinkTable";
 import { OverallClicksChart } from "@/components/analytics/OverallClicksChart";
-import { VisitorMetricsCard } from "@/components/analytics/VisitorMetricsCard";
+import { ClicksOverTimeSection } from "@/components/analytics/ClicksOverTimeSection";
 
-interface StatsData {
-  clicks: number;
-  visitors: number;
-}
+const timeRanges = [
+  { value: "24h", label: "Last 24 Hours" },
+  { value: "7d", label: "Last 7 Days" },
+  { value: "30d", label: "Last 30 Days" },
+  { value: "3m", label: "Last 3 Months" },
+  { value: "ytd", label: "Year to Date" },
+  { value: "12m", label: "Last 12 Months" },
+  { value: "all", label: "All Time" },
+];
 
 export default function OverviewPage() {
-  const [overviewData, setOverviewData] = useState<any>(null);
-  const [visitorMetrics, setVisitorMetrics] = useState<any>(null);
+  const [timeRange, setTimeRange] = useState("30d");
+  const [links, setLinks] = useState([]);
+  const [folders, setFolders] = useState([]);
+  const [stats, setStats] = useState({});
+  const [xAxisFormat, setXAxisFormat] = useState("MMM d");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+
+  const getStartDateAndFormat = (range: string) => {
+    const now = new Date();
+    let startDate: Date;
+    let format: string;
+    let interval: "hour" | "day" | "week" | "month" = "day";
+
+    switch (range) {
+      case "24h":
+        startDate = subDays(now, 1);
+        format = "HH:mm";
+        interval = "hour";
+        break;
+      case "7d":
+        startDate = subDays(now, 7);
+        format = "EEE";
+        break;
+      case "30d":
+        startDate = subDays(now, 30);
+        format = "MMM d";
+        break;
+      case "3m":
+        startDate = subMonths(now, 3);
+        format = "MMM d";
+        interval = "week";
+        break;
+      case "ytd":
+        startDate = startOfYear(now);
+        format = "MMM";
+        interval = "month";
+        break;
+      case "12m":
+        startDate = subYears(now, 1);
+        format = "MMM";
+        interval = "month";
+        break;
+      case "all":
+      default:
+        startDate = new Date(0);
+        format = "MMM yyyy";
+        interval = "month";
+    }
+
+    return { startDate, format, interval };
+  };
+
+  const fetchLinks = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("shortened_links")
+      .select(
+        `
+        id,
+        original_url,
+        short_code,
+        clicks,
+        created_at,
+        folder_id,
+        domains (
+          id,
+          domain
+        )
+      `
+      )
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    return data;
+  };
+
+  const fetchFolders = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("folders")
+      .select("*")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    return data;
+  };
+
+  const fetchStats = async (
+    userId: string,
+    startDate: string,
+    interval: string
+  ) => {
+    const { data, error } = await supabase.rpc("get_overall_stats", {
+      p_user_id: userId,
+      p_start_date: startDate,
+      p_interval: interval,
+    });
+
+    if (error) throw error;
+    return data;
+  };
 
   const fetchOverviewData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Fetch all links (including those in folders)
-      const { data: links, error: linksError } = await supabase.from(
-        "shortened_links"
-      ).select(`
-          id,
-          original_url,
-          short_code,
-          clicks,
-          created_at,
-          folder_id,
-          domains (
-            id,
-            domain
-          )
-        `);
-
-      if (linksError) throw linksError;
-
-      // Fetch all folders
-      const { data: folders, error: foldersError } = await supabase
-        .from("folders")
-        .select("*");
-
-      if (foldersError) throw foldersError;
-
-      // Fetch overall stats
-      const { data: stats, error: statsError } = await supabase.rpc(
-        "get_overall_stats"
-      );
-
-      if (statsError) throw statsError;
-
-      // Fetch visitor metrics for different time periods
-      const timeFrames = [
-        { name: "24h", interval: "24 hours" },
-        { name: "7d", interval: "7 days" },
-        { name: "30d", interval: "30 days" },
-      ];
-
-      const metrics: any = {};
-      for (const frame of timeFrames) {
-        const { data, error } = await supabase.rpc("get_link_metrics", {
-          p_link_id: null,
-          p_time_window: frame.interval,
-        });
-
-        if (error) {
-          console.error(`Error fetching ${frame.name} metrics:`, error);
-          continue;
-        }
-
-        if (data && data[0]) {
-          metrics[frame.name] = data[0];
-        }
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("No authenticated user found");
       }
 
-      setVisitorMetrics(metrics);
-      setOverviewData({
-        links: links || [],
-        folders: folders || [],
-        stats: stats || {},
-      });
+      const userId = userData.user.id;
+      const { startDate, format, interval } = getStartDateAndFormat(timeRange);
+
+      setXAxisFormat(format);
+
+      const [linksData, foldersData, statsData] = await Promise.all([
+        fetchLinks(userId),
+        fetchFolders(userId),
+        fetchStats(userId, startDate.toISOString(), interval),
+      ]);
+
+      setLinks(linksData);
+      setFolders(foldersData);
+      setStats(statsData);
     } catch (error) {
       console.error("Error fetching overview data:", error);
       setError("Failed to load overview data");
@@ -112,7 +185,11 @@ export default function OverviewPage() {
 
   useEffect(() => {
     fetchOverviewData();
-  }, []);
+  }, [timeRange]);
+
+  const handleTimeRangeChange = (newTimeRange: string) => {
+    setTimeRange(newTimeRange);
+  };
 
   if (isLoading) {
     return (
@@ -130,14 +207,9 @@ export default function OverviewPage() {
     );
   }
 
-  const { links, folders, stats } = overviewData;
-
   const totalLinks = links.length;
   const totalFolders = folders.length;
-  const totalClicks = links.reduce(
-    (sum: number, link: any) => sum + (link.clicks || 0),
-    0
-  );
+  const totalClicks = stats.total_clicks || 0;
 
   const prepareChartData = (
     data: Record<string, { clicks: number; visitors: number }> | null,
@@ -168,22 +240,24 @@ export default function OverviewPage() {
     <main className="container mx-auto py-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/dashboard/folders/new">
-              <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" /> New
-              Folder
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard/links/new">
-              <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New Link
-            </Link>
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            <Button asChild>
+              <Link href="/dashboard/folders/new">
+                <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" /> New
+                Folder
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/links/new">
+                <Plus className="mr-2 h-4 w-4" aria-hidden="true" /> New Link
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
       <div className="space-y-6">
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Links" value={totalLinks} icon={LinkIcon} />
           <StatCard
             title="Total Folders"
@@ -201,21 +275,9 @@ export default function OverviewPage() {
               icon={ArrowUpRight}
             />
           )}
-          {visitorMetrics && <VisitorMetricsCard metrics={visitorMetrics} />}
         </div>
 
-        {clicksOverTime.length > 0 ? (
-          <OverallClicksChart data={clicksOverTime} />
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Clicks Over Time</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p>No click data available for the time chart</p>
-            </CardContent>
-          </Card>
-        )}
+        <ClicksOverTimeSection data={clicksOverTime} />
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
           <Card>

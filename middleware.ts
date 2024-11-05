@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { updateSession } from "@/libs/supabase/middleware";
 import UAParser from "ua-parser-js";
+import { parseUserAgent } from "./libs/visitorId";
 
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
@@ -72,16 +73,119 @@ async function handleShortLink(request: NextRequest, url: URL) {
   );
 
   try {
-    const linkData = await fetchLinkData(supabase, shortCode);
-    if (!linkData) {
+    const { data: linkData, error: linkError } = await supabase
+      .from("shortened_links")
+      .select("id, original_url")
+      .eq("short_code", shortCode)
+      .single();
+
+    if (linkError || !linkData) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/404`);
     }
 
-    const clickParams = await prepareClickParams(request, linkData);
-    await recordClick(supabase, clickParams);
+    // Get visitor and session IDs from cookies
+    let visitorId = request.cookies.get("visitorId")?.value;
+    let sessionId = request.cookies.get("sessionId")?.value;
 
-    // Redirect to the original URL
-    return NextResponse.redirect(linkData.original_url);
+    // Generate new session ID if none exists
+    if (!sessionId) {
+      sessionId = `${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      response.cookies.set("sessionId", sessionId, {
+        maxAge: 30 * 60, // 30 minutes
+        path: "/",
+        sameSite: "strict",
+      });
+    }
+
+    // Generate new visitor ID if none exists
+    if (!visitorId) {
+      visitorId = `v-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      response.cookies.set("visitorId", visitorId, {
+        maxAge: 365 * 24 * 60 * 60, // 1 year
+        path: "/",
+        sameSite: "strict",
+      });
+    }
+
+    const userAgent = request.headers.get("user-agent") || "";
+    const { browser, operatingSystem, deviceType } = parseUserAgent(userAgent);
+
+    const clickParams = {
+      p_link_id: linkData.id,
+      p_referrer: request.headers.get("referer") || null,
+      p_ip_address:
+        request.headers.get("x-forwarded-for")?.split(",")[0] ||
+        request.ip ||
+        "unknown",
+      p_user_agent: userAgent,
+      p_device_type: deviceType,
+      p_operating_system: operatingSystem,
+      p_browser: browser,
+      p_click_type: "direct",
+      p_latitude: null,
+      p_longitude: null,
+      p_visitor_id: visitorId,
+    };
+
+    // Record click and update visitor count
+    const { data: clickData, error: clickError } = await supabase.rpc(
+      "increment_clicks_and_visitors",
+      clickParams
+    );
+
+    if (clickError) {
+      console.error(
+        "Error recording click and updating visitor count:",
+        clickError
+      );
+    } else {
+      console.log(
+        "Click recorded and visitor count updated successfully:",
+        clickData
+      );
+    }
+
+    // Manage visitor session separately
+    const { error: sessionError } = await supabase.rpc(
+      "manage_visitor_session",
+      {
+        p_link_id: linkData.id,
+        p_visitor_id: visitorId,
+        p_session_id: sessionId,
+        p_browser: browser,
+        p_operating_system: operatingSystem,
+        p_device_type: deviceType,
+        p_ip_address: clickParams.p_ip_address,
+        p_referrer: clickParams.p_referrer,
+      }
+    );
+
+    if (sessionError) {
+      console.error("Error managing visitor session:", sessionError);
+    } else {
+      console.log("Visitor session managed successfully");
+    }
+
+    // Set redirect response
+    const redirectResponse = NextResponse.redirect(linkData.original_url);
+
+    // Copy cookies to redirect response
+    redirectResponse.cookies.set("sessionId", sessionId, {
+      maxAge: 30 * 60,
+      path: "/",
+      sameSite: "strict",
+    });
+    redirectResponse.cookies.set("visitorId", visitorId, {
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+      sameSite: "strict",
+    });
+
+    return redirectResponse;
   } catch (error) {
     console.error("Unexpected error in middleware:", error);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/error`);
