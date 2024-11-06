@@ -56,7 +56,7 @@
     "react-leaflet": "^4.2.1",
     "react-syntax-highlighter": "^15.5.0",
     "react-tooltip": "^5.26.3",
-    "recharts": "^2.13.2",
+    "recharts": "^2.13.3",
     "stripe": "^13.11.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",

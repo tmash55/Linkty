@@ -8,12 +8,12 @@ interface ClickData {
   clicks: number;
 }
 
-interface OverallClicksChartProps {
+interface LinkClicksAreaChartProps {
   data: ClickData[];
   xAxisFormat: string;
 }
 
-export const OverallClicksChart: React.FC<OverallClicksChartProps> = ({
+export const LinkClicksAreaChart: React.FC<LinkClicksAreaChartProps> = ({
   data,
   xAxisFormat,
 }) => {
