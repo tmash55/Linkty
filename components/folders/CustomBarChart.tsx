@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronUp } from "lucide-react";
 
 interface CustomBarChartProps {
-  data: { name: string; value: number }[];
+  data: { name: string; value: number; icon?: React.ReactNode }[];
   title: string;
   showVisitors?: boolean;
 }
@@ -18,33 +18,47 @@ export const CustomBarChart: React.FC<CustomBarChartProps> = ({
   const maxValue = Math.max(...data.map((item) => item.value));
 
   return (
-    <div className="space-y-1">
-      {sortedData.map((item) => {
-        const percentage = ((item.value / total) * 100).toFixed(0);
-        const barWidth = `${(item.value / maxValue) * 100}%`;
-        return (
-          <div key={item.name} className="relative">
-            <div
-              className="absolute inset-0 bg-muted rounded-sm"
-              style={{ width: barWidth }}
-            />
-            <div className="relative flex items-center justify-between py-2 z-10">
-              <div className="flex items-center space-x-2">
-                <div className="w-[120px] truncate text-sm">{item.name}</div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="text-sm font-medium">
-                  {item.value.toLocaleString()}{" "}
-                  {showVisitors ? "visitors" : "clicks"}
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {sortedData.map((item) => {
+            const percentage = ((item.value / total) * 100).toFixed(0);
+            const barWidth = `${(item.value / maxValue) * 100}%`;
+            return (
+              <div key={item.name} className="relative">
+                <div
+                  className="absolute inset-0 bg-muted rounded-sm"
+                  style={{ width: barWidth }}
+                />
+                <div className="relative flex items-center justify-between py-2 z-10">
+                  <div className="flex items-center space-x-2">
+                    {item.icon && (
+                      <div className="w-5 h-5 flex items-center justify-center">
+                        {item.icon}
+                      </div>
+                    )}
+                    <div className="w-[120px] truncate text-sm">
+                      {item.name}
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-sm font-medium">
+                      {item.value.toLocaleString()}{" "}
+                      {showVisitors ? "visitors" : "clicks"}
+                    </div>
+                    <div className="text-sm text-muted-foreground w-[40px] text-right">
+                      {percentage}%
+                    </div>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground w-[40px] text-right">
-                  {percentage}%
-                </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

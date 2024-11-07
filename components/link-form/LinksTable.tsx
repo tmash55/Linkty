@@ -43,6 +43,14 @@ type ShortenedLink = {
   created_at: string;
   clicks: number;
   domain: string | null;
+  qr_settings?: QRCodeSettings;
+};
+
+type QRCodeSettings = {
+  bgColor: string;
+  fgColor: string;
+  logoUrl?: string;
+  errorCorrectionLevel: "L" | "M" | "Q" | "H";
 };
 
 type SortField = "created_at" | "clicks";
@@ -122,6 +130,35 @@ export default function LinksTable() {
         description: "Unable to copy the URL. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const saveQRSettings = async (linkId: string, settings: QRCodeSettings) => {
+    const { data, error } = await supabase
+      .from("shortened_links")
+      .update({
+        qr_settings: settings,
+      })
+      .eq("id", linkId);
+
+    if (error) {
+      console.error("Error saving QR code settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save QR code settings. Please try again.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "QR code settings saved successfully.",
+      });
+      // Update the local state
+      setLinks(
+        links.map((link) =>
+          link.id === linkId ? { ...link, qr_settings: settings } : link
+        )
+      );
     }
   };
 
@@ -345,6 +382,8 @@ export default function LinksTable() {
           <DialogContent className="max-w-3xl w-full">
             <QRCodeGenerator
               initialUrl={`${link.domain || SHORT_DOMAIN}/${link.short_code}`}
+              initialSettings={link.qr_settings}
+              onSave={(settings) => saveQRSettings(link.id, settings)}
             />
           </DialogContent>
         </Dialog>

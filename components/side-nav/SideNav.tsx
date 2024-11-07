@@ -24,6 +24,9 @@ import {
   Folder,
   Globe,
   ChevronDown,
+  MessageSquare,
+  Map,
+  BarChart3,
 } from "lucide-react";
 import { createClient } from "@/libs/supabase/client";
 import { cn } from "@/lib/utils";
@@ -37,6 +40,7 @@ import config from "@/config";
 
 const navItems = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "All Links", href: "/links", icon: LinkIcon },
   { name: "Domains", href: "/domains/new", icon: Globe },
 ];
@@ -49,6 +53,27 @@ interface NavButtonProps {
   active?: boolean;
   onNavigation?: () => void;
 }
+
+interface AnimatedIconProps {
+  icon: React.ElementType;
+  className?: string;
+}
+
+const AnimatedIcon: React.FC<AnimatedIconProps> = ({
+  icon: Icon,
+  className = "",
+}) => {
+  return (
+    <div className="group relative">
+      <Icon
+        className={`transition-all duration-300 ease-in-out ${className}`}
+      />
+      <Icon
+        className={`absolute top-0 left-0 opacity-0 scale-125 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:scale-100 ${className}`}
+      />
+    </div>
+  );
+};
 
 export default function SideNav() {
   const [collapsed, setCollapsed] = useState(false);
@@ -154,14 +179,14 @@ export default function SideNav() {
           >
             {onClick ? (
               <div className="flex items-center">
-                <Icon className="h-4 w-4" />
+                <AnimatedIcon icon={Icon} className="h-4 w-4" />
                 {(!collapsed || isMobile) && (
                   <span className="ml-2">{name}</span>
                 )}
               </div>
             ) : (
               <Link href={href} className="flex items-center">
-                <Icon className="h-4 w-4" />
+                <AnimatedIcon icon={Icon} className="h-4 w-4" />
                 {(!collapsed || isMobile) && (
                   <span className="ml-2">{name}</span>
                 )}
@@ -230,7 +255,7 @@ export default function SideNav() {
             )}
           >
             <div className="flex items-center">
-              <Folder className="h-4 w-4 mr-2" />
+              <AnimatedIcon icon={Folder} className="h-4 w-4 mr-2" />
               {(!collapsed || isMobile) && <span>Folders</span>}
             </div>
             <ChevronDown
@@ -257,7 +282,7 @@ export default function SideNav() {
             className="w-full justify-start"
             onClick={() => setIsCreateFolderOpen(true)}
           >
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <AnimatedIcon icon={PlusCircle} className="h-4 w-4 mr-2" />
             {(!collapsed || isMobile) && <span>Create New Folder</span>}
           </Button>
         </CollapsibleContent>
@@ -277,6 +302,20 @@ export default function SideNav() {
       </nav>
 
       <div className="mt-auto space-y-2">
+        <NavButton
+          href="/feedback"
+          icon={MessageSquare}
+          name="Feedback"
+          active={pathname === "/feedback"}
+          onNavigation={closeMenu}
+        />
+        <NavButton
+          href="/roadmap"
+          icon={Map}
+          name="Roadmap"
+          active={pathname === "/roadmap"}
+          onNavigation={closeMenu}
+        />
         <NavButton
           href="/account"
           icon={User}

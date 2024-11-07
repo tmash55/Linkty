@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -22,17 +22,26 @@ interface ListItemProps {
   name: string;
   value: number;
   icon: React.ReactNode;
+  percentage: number;
 }
 
-function ListItem({ name, value, icon }: ListItemProps) {
+function ListItem({ name, value, icon, percentage }: ListItemProps) {
   return (
-    <div className="flex items-center bg-secondary/20 p-2 rounded-lg">
-      <div className="mr-2">{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{name}</p>
-      </div>
-      <div className="ml-2">
-        <p className="text-sm text-muted-foreground">{value}</p>
+    <div className="relative">
+      {/* Background bar showing the percentage */}
+      <div
+        className="absolute inset-0 bg-secondary/20 rounded-lg transition-all duration-500 ease-in-out"
+        style={{ width: `${percentage}%` }}
+      />
+      {/* Content */}
+      <div className="relative flex items-center p-2 rounded-lg">
+        <div className="mr-2">{icon}</div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">{name}</p>
+        </div>
+        <div className="ml-2">
+          <p className="text-sm text-muted-foreground">{value}</p>
+        </div>
       </div>
     </div>
   );
@@ -48,6 +57,15 @@ export function AnalyticsList({ title, items, getIcon }: AnalyticsListProps) {
   const hasMore = items.length > ITEMS_TO_SHOW;
   const displayItems = hasMore ? items.slice(0, ITEMS_TO_SHOW) : items;
 
+  // Calculate percentages based on the highest value
+  const maxValue = useMemo(() => {
+    return Math.max(...items.map((item) => item.value));
+  }, [items]);
+
+  const getPercentage = (value: number) => {
+    return (value / maxValue) * 100;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -61,6 +79,7 @@ export function AnalyticsList({ title, items, getIcon }: AnalyticsListProps) {
               name={item.name}
               value={item.value}
               icon={getIcon(item.name)}
+              percentage={getPercentage(item.value)}
             />
           ))}
 
@@ -82,6 +101,7 @@ export function AnalyticsList({ title, items, getIcon }: AnalyticsListProps) {
                       name={item.name}
                       value={item.value}
                       icon={getIcon(item.name)}
+                      percentage={getPercentage(item.value)}
                     />
                   ))}
                 </div>

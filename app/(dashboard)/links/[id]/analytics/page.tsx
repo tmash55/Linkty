@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/libs/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -18,11 +19,22 @@ import {
   MapPin,
   Globe,
   Loader,
+  BarChart3,
+  Copy,
+  ExternalLink,
+  Share2,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BarChart } from "@/components/ui/chart2";
 import { AnalyticsList } from "@/components/analytics/analytics-list";
 import { LinkClicksChart } from "@/components/analytics/LinkClicksChart";
+import CopyLinkButton from "@/components/CopyLinkButton";
 
 interface LinkData {
   id: string;
@@ -466,32 +478,63 @@ export default function LinkAnalyticsPage() {
   const totalClicks = clicksOverTime.reduce((sum, day) => sum + day.clicks, 0);
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-4xl font-bold mb-8">Link Analytics</h1>
-
-      <div className="mb-8 flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">{link.short_code}</h2>
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="grid gap-8 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Clicks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{totalClicks}</p>
-          </CardContent>
-        </Card>
+    <div className="container mx-auto py-6">
+      <div className="space-y-4 pb-6 border-b mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold">Link Analytics</h1>
+            <div className="flex items-center gap-2">
+              <CopyLinkButton shortCode={link.short_code} />
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <BarChart3 className="h-4 w-4" />
+                {totalClicks} clicks
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Select value={timeFilter} onValueChange={setTimeFilter}>
+              <SelectTrigger className="h-8 w-[130px]">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Share Analytics</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="outline" asChild>
+                      <a
+                        href={link.original_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Visit Original URL</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground truncate">
+          Original URL: <span className="font-medium">{link.original_url}</span>
+        </div>
       </div>
 
       <div className="mb-8">
@@ -556,31 +599,6 @@ export default function LinkAnalyticsPage() {
           getIcon={getBrowserIcon}
         />
       </div>
-
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Top Locations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {locations.map((location) => (
-              <div key={location.name} className="flex items-center">
-                <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {location.name}
-                  </p>
-                </div>
-                <div className="ml-2">
-                  <p className="text-sm text-muted-foreground">
-                    {location.value}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

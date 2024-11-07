@@ -13,6 +13,7 @@ import {
 import { BarChart } from "@/components/ui/bar-chart";
 import { LineChart } from "@/components/ui/line-chart";
 import { createClient } from "@/libs/supabase/client";
+import { Loader } from "lucide-react";
 
 export default function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -42,11 +43,16 @@ export default function AnalyticsPage() {
     }
   }
 
-  if (!analyticsData) return <div>Loading...</div>;
+  if (!analyticsData)
+    return (
+      <div className="container mx-auto py-10 flex items-center justify-center min-h-screen">
+        <Loader className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Analytics Dashboard</h1>
+    <div className="container mx-auto py-8 space-y-8">
+      <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
 
       <div className="mb-4 flex justify-between items-center">
         <Tabs value={dataType} onValueChange={setDataType}>

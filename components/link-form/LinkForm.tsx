@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { nanoid } from "nanoid";
+import { Check, Copy, Link2 } from "lucide-react";
 
 interface Folder {
   id: string;
@@ -38,6 +39,9 @@ const DEFAULT_DOMAIN_VALUE = "default_domain";
 
 export function LinkForm() {
   const [url, setUrl] = useState("");
+  const [customShortCode, setCustomShortCode] = useState("");
+  const [isCustomShortCodeAvailable, setIsCustomShortCodeAvailable] =
+    useState(true);
   const [folderId, setFolderId] = useState<string>(NO_FOLDER_VALUE);
   const [domainId, setDomainId] = useState<string>(DEFAULT_DOMAIN_VALUE);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -45,6 +49,7 @@ export function LinkForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shortenedUrl, setShortenedUrl] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
   const supabase = createClient();
   const SHORT_DOMAIN = process.env.NEXT_PUBLIC_SHORT_DOMAIN || "short.test";
 
@@ -52,6 +57,14 @@ export function LinkForm() {
     fetchFolders();
     fetchDomains();
   }, []);
+
+  useEffect(() => {
+    if (customShortCode) {
+      checkShortCodeAvailability(customShortCode);
+    } else {
+      setIsCustomShortCodeAvailable(true);
+    }
+  }, [customShortCode]);
 
   const fetchFolders = async () => {
     const { data, error } = await supabase
@@ -71,6 +84,22 @@ export function LinkForm() {
     if (error) console.error("Error fetching domains:", error);
   };
 
+  const checkShortCodeAvailability = async (code: string) => {
+    const { data, error } = await supabase
+      .from("shortened_links")
+      .select("id")
+      .eq("short_code", code)
+      .single();
+
+    if (error && error.code === "PGRST116") {
+      // No match found, short code is available
+      setIsCustomShortCodeAvailable(true);
+    } else {
+      // Match found or other error, short code is not available
+      setIsCustomShortCodeAvailable(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -82,11 +111,15 @@ export function LinkForm() {
         throw new Error("URL must start with http:// or https://");
       }
 
-      const shortCode = nanoid(6);
+      const shortCode = customShortCode || nanoid(6);
       const { data: user } = await supabase.auth.getUser();
 
       if (!user.user) {
         throw new Error("User not authenticated");
+      }
+
+      if (customShortCode && !isCustomShortCodeAvailable) {
+        throw new Error("The custom short code is already taken");
       }
 
       const { error } = await supabase.from("shortened_links").insert({
@@ -113,10 +146,18 @@ export function LinkForm() {
     }
   };
 
+  const copyToClipboard = () => {
+    if (shortenedUrl) {
+      navigator.clipboard.writeText(shortenedUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
+
   return (
-    <Card>
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Create New Link</CardTitle>
+        <CardTitle className="text-2xl font-bold">Create New Link</CardTitle>
         <CardDescription>
           Shorten your URL and track its performance
         </CardDescription>
@@ -125,14 +166,43 @@ export function LinkForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="url">URL to shorten</Label>
+            <div className="relative">
+              <Input
+                id="url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+                placeholder="https://example.com"
+                className="pl-10"
+              />
+              <Link2
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="customShortCode">
+              Custom short code (optional)
+            </Label>
             <Input
-              id="url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-              placeholder="https://example.com"
+              id="customShortCode"
+              type="text"
+              value={customShortCode}
+              onChange={(e) => setCustomShortCode(e.target.value)}
+              placeholder="e.g., my-link"
+              className={
+                customShortCode && !isCustomShortCodeAvailable
+                  ? "border-red-500"
+                  : ""
+              }
             />
+            {customShortCode && !isCustomShortCodeAvailable && (
+              <p className="text-sm text-red-500">
+                This short code is already taken
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="folder">Folder (optional)</Label>
@@ -173,7 +243,13 @@ export function LinkForm() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={
+              isLoading || (customShortCode && !isCustomShortCodeAvailable)
+            }
+          >
             {isLoading ? "Creating..." : "Create Short Link"}
           </Button>
         </form>
@@ -182,18 +258,21 @@ export function LinkForm() {
         <CardFooter>
           <div className="w-full">
             <h2 className="text-lg font-semibold mb-2">Your Shortened Link:</h2>
-            <Alert>
-              <AlertDescription>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {shortenedUrl}
-                </a>
-              </AlertDescription>
-            </Alert>
+            <div className="flex items-center space-x-2">
+              <Input value={shortenedUrl} readOnly className="flex-grow" />
+              <Button
+                onClick={copyToClipboard}
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0"
+              >
+                {isCopied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </CardFooter>
       )}

@@ -126,6 +126,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
 
     const userAgent = request.headers.get("user-agent") || "";
     const { browser, operatingSystem, deviceType } = parseUserAgent(userAgent);
+    const referrerInfo = getReferrerInfo(request.headers.get("referer"));
 
     const clickParams: {
       p_link_id: string;
@@ -141,7 +142,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_visitor_id: string;
     } = {
       p_link_id: linkData.id,
-      p_referrer: request.headers.get("referer") || null,
+      p_referrer: referrerInfo.url,
       p_ip_address:
         request.headers.get("x-forwarded-for")?.split(",")[0] ||
         request.ip ||
@@ -150,7 +151,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_device_type: deviceType,
       p_operating_system: operatingSystem,
       p_browser: browser,
-      p_click_type: "direct",
+      p_click_type: referrerInfo.type,
       p_latitude: null,
       p_longitude: null,
       p_visitor_id: visitorId,
@@ -280,6 +281,46 @@ function prepareClickParams(
     p_longitude: null,
     p_visitor_id: visitorId,
   };
+}
+
+function getReferrerInfo(referrer: string | null): {
+  type: string;
+  url: string | null;
+} {
+  if (!referrer) return { type: "direct", url: null };
+
+  try {
+    const referrerUrl = new URL(referrer);
+    const referrerHostname = referrerUrl.hostname.toLowerCase();
+
+    // Define known referrer types
+    const knownReferrers: { [key: string]: string[] } = {
+      search_engine: ["google", "bing", "yahoo", "duckduckgo", "baidu"],
+      social_media: [
+        "facebook",
+        "twitter",
+        "linkedin",
+        "instagram",
+        "pinterest",
+        "tiktok",
+      ],
+      video_platform: ["youtube", "vimeo", "dailymotion"],
+      email: ["gmail", "outlook", "yahoo", "protonmail"],
+    };
+
+    // Check if the referrer matches any known type
+    for (const [type, domains] of Object.entries(knownReferrers)) {
+      if (domains.some((domain) => referrerHostname.includes(domain))) {
+        return { type, url: referrer };
+      }
+    }
+
+    // If no match found, return the referrer as 'other' with the full URL
+    return { type: "other", url: referrer };
+  } catch (error) {
+    console.error("Error parsing referrer URL:", error);
+    return { type: "invalid", url: referrer };
+  }
 }
 
 function getDeviceType(parsedResult: UAParser.IResult): string {

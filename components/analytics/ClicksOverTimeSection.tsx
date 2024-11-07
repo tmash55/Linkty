@@ -170,8 +170,7 @@ export const ClicksOverTimeSection: React.FC<ClicksOverTimeSectionProps> = ({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>Clicks Over Time</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select time range" />
