@@ -97,18 +97,27 @@ const features: Feature[] = [
 const columns = [
   {
     title: "Planned",
-    color: "bg-muted text-muted-foreground",
-    headerColor: "text-secondary",
+    color: "bg-muted",
+    headerColor: "text-muted-foreground",
+    cardColor: "bg-card",
+    textColor: "text-card-foreground",
+    iconColor: "text-accent",
   },
   {
     title: "Coming Soon",
-    color: "bg-secondary text-secondary-foreground",
-    headerColor: "text-secondary-foreground",
+    color: "bg-muted",
+    headerColor: "text-muted-foreground",
+    cardColor: "bg-secondary",
+    textColor: "text-white",
+    iconColor: "text-accent",
   },
   {
     title: "In Progress",
-    color: "bg-primary text-primary-foreground",
-    headerColor: "text-primary-foreground",
+    color: "bg-muted",
+    headerColor: "text-muted-foreground",
+    cardColor: "bg-primary",
+    textColor: "text-primary-foreground",
+    iconColor: "text-secondary",
   },
 ];
 
@@ -127,19 +136,22 @@ export default function KanbanRoadmap() {
                 .map((feature, index) => (
                   <Card
                     key={index}
-                    className="bg-card transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:z-10"
+                    className={`${column.cardColor} transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg hover:z-10`}
                   >
                     <CardHeader className="flex flex-row items-center space-y-0 pb-2">
                       {React.createElement(feature.icon, {
-                        className:
-                          "h-6 w-6 mr-2 text-accent transition-transform duration-300 ease-in-out group-hover:scale-110",
+                        className: `h-6 w-6 mr-2 ${column.iconColor} transition-transform duration-300 ease-in-out group-hover:scale-110`,
                       })}
-                      <CardTitle className="text-card-foreground group-hover:text-accent transition-colors duration-300 ease-in-out">
+                      <CardTitle
+                        className={`${column.textColor} group-hover:text-accent transition-colors duration-300 ease-in-out`}
+                      >
                         {feature.title}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <CardDescription className="text-muted-foreground group-hover:text-card-foreground transition-colors duration-300 ease-in-out">
+                      <CardDescription
+                        className={`${column.textColor} group-hover:text-card-foreground transition-colors duration-300 ease-in-out`}
+                      >
                         {feature.description}
                       </CardDescription>
                     </CardContent>

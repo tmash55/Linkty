@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/libs/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -199,8 +199,8 @@ export default function SplitViewFeedback() {
               <span>How do I create a new short link?</span>
             </h3>
             <p className="text-sm text-muted-foreground">
-              Click the "Create New Link" button in the dashboard, paste your
-              URL, and click create.
+              Click the &quot;Create New Link&quot; button in the dashboard,
+              paste your URL, and click create.
             </p>
           </div>
           <div className="space-y-2">

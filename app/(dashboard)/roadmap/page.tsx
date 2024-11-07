@@ -23,7 +23,7 @@ export default function RoadmapPage() {
           Have a feature suggestion?
         </h2>
         <p className="text-muted-foreground mb-6">
-          We'd love to hear your ideas! Help shape the future of Linkty by
+          We&apos;d love to hear your ideas! Help shape the future of Linkty by
           sharing your feedback.
         </p>
         <Button asChild>
