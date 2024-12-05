@@ -1,6 +1,13 @@
 import React from "react";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { format, parseISO } from "date-fns";
 
 interface ClickData {
@@ -50,6 +57,7 @@ export const OverallClicksChart: React.FC<OverallClicksChartProps> = ({
               />
             </linearGradient>
           </defs>
+          <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="date"
             tickLine={false}

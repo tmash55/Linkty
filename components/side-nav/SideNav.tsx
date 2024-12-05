@@ -42,7 +42,7 @@ const navItems = [
   { name: "Overview", href: "/overview", icon: LayoutDashboard },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "All Links", href: "/links", icon: LinkIcon },
-  { name: "Domains", href: "/domains/new", icon: Globe },
+  //{ name: "Domains", href: "/domains/new", icon: Globe },
 ];
 
 interface NavButtonProps {

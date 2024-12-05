@@ -41,7 +41,7 @@ type ShortenedLink = {
   original_url: string;
   short_code: string;
   created_at: string;
-  clicks: number;
+  total_clicks: number;
   domain: string | null;
   qr_settings?: QRCodeSettings;
 };
@@ -53,7 +53,7 @@ type QRCodeSettings = {
   errorCorrectionLevel: "L" | "M" | "Q" | "H";
 };
 
-type SortField = "created_at" | "clicks";
+type SortField = "created_at" | "total_clicks";
 
 export default function LinksTable() {
   const [links, setLinks] = useState<ShortenedLink[]>([]);
@@ -217,10 +217,10 @@ export default function LinksTable() {
                 </TableHead>
                 <TableHead
                   className="w-[10%] cursor-pointer"
-                  onClick={() => handleSort("clicks")}
+                  onClick={() => handleSort("total_clicks")}
                 >
                   Clicks{" "}
-                  {sortField === "clicks" &&
+                  {sortField === "total_clicks" &&
                     (sortDirection === "asc" ? (
                       <ChevronUp className="inline" />
                     ) : (
@@ -320,7 +320,7 @@ export default function LinksTable() {
                     <TableCell>
                       {new Date(link.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{link.clicks}</TableCell>
+                    <TableCell>{link.total_clicks}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Tooltip>

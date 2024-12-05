@@ -303,7 +303,7 @@ export default function OverviewPage() {
         id,
         original_url,
         short_code,
-        clicks,
+        total_clicks,
         created_at,
         folder_id,
         domains (
@@ -333,7 +333,7 @@ export default function OverviewPage() {
     startDate: string,
     interval: string
   ) => {
-    const { data, error } = await supabase.rpc("get_overall_stats", {
+    const { data, error } = await supabase.rpc("get_overall_stats_version2", {
       p_user_id: userId,
       p_start_date: startDate,
       p_interval: interval,
@@ -424,7 +424,8 @@ export default function OverviewPage() {
   const clicksOverTime = stats.clicks_over_time || [];
 
   const topPerformingLink = links.reduce(
-    (max: any, link: any) => (link.clicks > (max?.clicks || 0) ? link : max),
+    (max: any, link: any) =>
+      link.total_clicks > (max?.total_clicks || 0) ? link : max,
     null
   );
 
@@ -462,7 +463,7 @@ export default function OverviewPage() {
         {topPerformingLink && (
           <StatCard
             title="Top Performing Link"
-            value={`${topPerformingLink.clicks || 0} clicks`}
+            value={`${topPerformingLink.total_clicks || 0} clicks`}
             description={`${
               topPerformingLink.domains?.domain || SHORT_DOMAIN
             }/${topPerformingLink.short_code}`}

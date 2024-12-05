@@ -99,8 +99,8 @@ const columns = [
     title: "Planned",
     color: "bg-muted",
     headerColor: "text-muted-foreground",
-    cardColor: "bg-card",
-    textColor: "text-card-foreground",
+    cardColor: "bg-secondary",
+    textColor: "text-white",
     iconColor: "text-accent",
   },
   {

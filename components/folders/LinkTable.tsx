@@ -32,7 +32,7 @@ interface LinkData {
   id: string;
   original_url: string;
   short_code: string;
-  clicks: number;
+  total_clicks: number;
   created_at: string;
   domains: {
     domain: string;
@@ -47,13 +47,13 @@ const SHORT_DOMAIN = process.env.NEXT_PUBLIC_SHORT_DOMAIN || "localhost:3000/s";
 
 export function LinkTable({ links }: LinkTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<"created_at" | "clicks">(
+  const [sortField, setSortField] = useState<"created_at" | "total_clicks">(
     "created_at"
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
-  const handleSort = (field: "created_at" | "clicks") => {
+  const handleSort = (field: "created_at" | "total_clicks") => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -94,8 +94,8 @@ export function LinkTable({ links }: LinkTableProps) {
           : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       } else {
         return sortDirection === "asc"
-          ? a.clicks - b.clicks
-          : b.clicks - a.clicks;
+          ? a.total_clicks - b.total_clicks
+          : b.total_clicks - a.total_clicks;
       }
     });
 
@@ -127,10 +127,10 @@ export function LinkTable({ links }: LinkTableProps) {
               </TableHead>
               <TableHead
                 className="w-[10%] cursor-pointer"
-                onClick={() => handleSort("clicks")}
+                onClick={() => handleSort("total_clicks")}
               >
                 Clicks{" "}
-                {sortField === "clicks" &&
+                {sortField === "total_clicks" &&
                   (sortDirection === "asc" ? (
                     <ChevronUp className="inline" />
                   ) : (
@@ -198,7 +198,7 @@ export function LinkTable({ links }: LinkTableProps) {
                 <TableCell>
                   {new Date(link.created_at).toLocaleDateString()}
                 </TableCell>
-                <TableCell>{link.clicks}</TableCell>
+                <TableCell>{link.total_clicks}</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
                     <Tooltip>
