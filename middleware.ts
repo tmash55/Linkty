@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { updateSession } from "@/libs/supabase/middleware";
 import UAParser from "ua-parser-js";
 import { parseUserAgent } from "./libs/visitorId";
+import { geolocation } from "@vercel/functions";
 interface ClickParams {
   p_link_id: string;
   p_referrer: string | null;
@@ -127,20 +128,10 @@ async function handleShortLink(request: NextRequest, url: URL) {
     const userAgent = request.headers.get("user-agent") || "";
     const { browser, operatingSystem, deviceType } = parseUserAgent(userAgent);
     const referrerInfo = getReferrerInfo(request.headers.get("referer"));
+    const geo = geolocation(request);
+    console.log("Geolocation data:", JSON.stringify(geo, null, 2));
 
-    const clickParams: {
-      p_link_id: string;
-      p_referrer: string | null;
-      p_ip_address: string;
-      p_user_agent: string;
-      p_device_type: string;
-      p_operating_system: string;
-      p_browser: string;
-      p_click_type: string;
-      p_latitude: number | null;
-      p_longitude: number | null;
-      p_visitor_id: string;
-    } = {
+    const clickParams = {
       p_link_id: linkData.id,
       p_referrer: referrerInfo.url,
       p_ip_address:
@@ -152,14 +143,16 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_operating_system: operatingSystem,
       p_browser: browser,
       p_click_type: referrerInfo.type,
-      p_latitude: null,
-      p_longitude: null,
+      p_latitude: geo.latitude ? parseFloat(geo.latitude) : null,
+      p_longitude: geo.longitude ? parseFloat(geo.longitude) : null,
       p_visitor_id: visitorId,
+      p_country: geo.country || null,
+      p_city: geo.city || null,
     };
 
     // Record click and update visitor count
     const { data: clickData, error: clickError } = await supabase.rpc(
-      "increment_clicks_and_visitors",
+      "increment_clicks_and_visitors_with_location",
       clickParams
     );
 
