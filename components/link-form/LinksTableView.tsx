@@ -88,14 +88,15 @@ export function LinksTableView({
             Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
                 <TableCell>
-                  <Skeleton className="h-4 w-[250px]" />
-                </TableCell>
-                <TableCell>
                   <div className="flex items-center space-x-2">
                     <Skeleton className="h-4 w-[180px]" />
                     <Skeleton className="h-8 w-8 rounded-full" />
                   </div>
                 </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[250px]" />
+                </TableCell>
+
                 <TableCell>
                   <Skeleton className="h-4 w-[100px]" />
                 </TableCell>

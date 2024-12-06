@@ -16,8 +16,10 @@ interface ClickParams {
   p_latitude: number | null;
   p_longitude: number | null;
   p_visitor_id: string;
+  p_country: string | null;
+  p_city: string | null;
+  p_is_qr_scan: boolean;
 }
-
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
 
@@ -32,7 +34,11 @@ export async function middleware(request: NextRequest) {
 
 async function handleShortLink(request: NextRequest, url: URL) {
   const shortCode = url.pathname.split("/")[2];
-  console.log("Handling short link request for:", shortCode);
+  const isQRScan = url.searchParams.has("qr");
+  console.log(
+    `Handling ${isQRScan ? "QR code" : "short link"} request for:`,
+    shortCode
+  );
 
   let response = NextResponse.next({
     request: {
@@ -131,7 +137,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
     const geo = geolocation(request);
     console.log("Geolocation data:", JSON.stringify(geo, null, 2));
 
-    const clickParams = {
+    const clickParams: ClickParams = {
       p_link_id: linkData.id,
       p_referrer: referrerInfo.url,
       p_ip_address:
@@ -142,17 +148,18 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_device_type: deviceType,
       p_operating_system: operatingSystem,
       p_browser: browser,
-      p_click_type: referrerInfo.type,
+      p_click_type: isQRScan ? "qr_scan" : referrerInfo.type,
       p_latitude: geo.latitude ? parseFloat(geo.latitude) : null,
       p_longitude: geo.longitude ? parseFloat(geo.longitude) : null,
       p_visitor_id: visitorId,
       p_country: geo.country || null,
       p_city: geo.city || null,
+      p_is_qr_scan: isQRScan,
     };
 
     // Record click and update visitor count
     const { data: clickData, error: clickError } = await supabase.rpc(
-      "increment_clicks_and_visitors_with_location",
+      "increment_clicks_and_visitors_with_location_and_qr",
       clickParams
     );
 
@@ -232,48 +239,6 @@ async function fetchLinkData(supabase: any, shortCode: string) {
   console.log("Current click count:", data.clicks);
 
   return data;
-}
-
-function prepareClickParams(
-  request: NextRequest,
-  linkData: { id: string }
-): ClickParams {
-  const userAgent = request.headers.get("user-agent") || "";
-  const parser = new UAParser(userAgent);
-  const parsedResult = parser.getResult();
-
-  const deviceType = getDeviceType(parsedResult);
-  const os = parsedResult.os.name || "unknown";
-  const browser = parsedResult.browser.name || "unknown";
-
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0] ||
-    request.headers.get("x-real-ip") ||
-    request.ip ||
-    "unknown";
-
-  console.log("IP Address detection:", {
-    "x-forwarded-for": request.headers.get("x-forwarded-for"),
-    "x-real-ip": request.headers.get("x-real-ip"),
-    "request.ip": request.ip,
-    detected_ip: ip,
-  });
-
-  const visitorId = generateVisitorId(ip, userAgent);
-
-  return {
-    p_link_id: linkData.id,
-    p_referrer: request.headers.get("referer") || null,
-    p_ip_address: ip,
-    p_user_agent: userAgent,
-    p_device_type: deviceType,
-    p_operating_system: os,
-    p_browser: browser,
-    p_click_type: "direct",
-    p_latitude: null,
-    p_longitude: null,
-    p_visitor_id: visitorId,
-  };
 }
 
 function getReferrerInfo(referrer: string | null): {

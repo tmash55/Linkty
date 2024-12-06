@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/libs/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   ChevronUp,
   ChevronDown,
@@ -39,11 +38,7 @@ export default function LinksTable() {
   const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const supabase = createClient();
 
-  useEffect(() => {
-    fetchLinks();
-  }, [sortField, sortDirection]);
-
-  async function fetchLinks() {
+  const fetchLinks = useCallback(async () => {
     setIsLoading(true);
     const { data: user } = await supabase.auth.getUser();
     if (user.user) {
@@ -71,74 +66,90 @@ export default function LinksTable() {
     }
     setIsLoading(false);
     setIsRefreshing(false);
-  }
+  }, [sortField, sortDirection, supabase]);
 
-  const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
+  useEffect(() => {
+    fetchLinks();
+  }, [fetchLinks]);
 
-  const handleRefresh = () => {
+  const handleSort = useCallback((field: SortField) => {
+    setSortField((prevField) => {
+      if (field === prevField) {
+        setSortDirection((prevDirection) =>
+          prevDirection === "asc" ? "desc" : "asc"
+        );
+      } else {
+        setSortDirection("desc");
+      }
+      return field;
+    });
+  }, []);
+
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchLinks();
-  };
+  }, [fetchLinks]);
 
-  const handleCopyLink = async (shortUrl: string, linkId: string) => {
-    try {
-      await navigator.clipboard.writeText(shortUrl);
-      setCopiedLinkId(linkId);
-      toast({
-        title: "Copied!",
-        description: "The short URL has been copied to your clipboard.",
-      });
-      setTimeout(() => setCopiedLinkId(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-      toast({
-        title: "Copy failed",
-        description: "Unable to copy the URL. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const saveQRSettings = async (linkId: string, settings: QRCodeSettings) => {
-    const { data, error } = await supabase
-      .from("shortened_links")
-      .update({
-        qr_settings: settings,
-      })
-      .eq("id", linkId);
-
-    if (error) {
-      console.error("Error saving QR code settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save QR code settings. Please try again.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "QR code settings saved successfully.",
-      });
-      setLinks(
-        links.map((link) =>
-          link.id === linkId ? { ...link, qr_settings: settings } : link
-        )
-      );
-    }
-  };
-
-  const filteredLinks = links.filter(
-    (link) =>
-      link.original_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      link.short_code.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleCopyLink = useCallback(
+    async (shortUrl: string, linkId: string) => {
+      try {
+        await navigator.clipboard.writeText(shortUrl);
+        setCopiedLinkId(linkId);
+        toast({
+          title: "Copied!",
+          description: "The short URL has been copied to your clipboard.",
+        });
+        setTimeout(() => setCopiedLinkId(null), 2000);
+      } catch (err) {
+        console.error("Failed to copy text: ", err);
+        toast({
+          title: "Copy failed",
+          description: "Unable to copy the URL. Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    []
   );
+
+  const saveQRSettings = useCallback(
+    async (linkId: string, settings: QRCodeSettings) => {
+      const { data, error } = await supabase
+        .from("shortened_links")
+        .update({
+          qr_settings: settings,
+        })
+        .eq("id", linkId);
+
+      if (error) {
+        console.error("Error saving QR code settings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to save QR code settings. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "QR code settings saved successfully.",
+        });
+        setLinks((prevLinks) =>
+          prevLinks.map((link) =>
+            link.id === linkId ? { ...link, qr_settings: settings } : link
+          )
+        );
+      }
+    },
+    [supabase]
+  );
+
+  const filteredLinks = useMemo(() => {
+    return links.filter(
+      (link) =>
+        link.original_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        link.short_code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [links, searchTerm]);
 
   return (
     <TooltipProvider>

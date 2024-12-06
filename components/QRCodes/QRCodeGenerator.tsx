@@ -198,7 +198,16 @@ export default function QRCodeGenerator({
       return "";
     }
     setQrError(null);
-    return url;
+    try {
+      const shortUrl = new URL(url);
+      // Add the 'qr' parameter to the short URL
+      shortUrl.searchParams.set("qr", "1");
+      return shortUrl.toString();
+    } catch (error) {
+      console.error("Invalid URL:", error);
+      setQrError("Invalid URL format");
+      return url; // Return the original URL if it's invalid
+    }
   }, [url]);
 
   return (
