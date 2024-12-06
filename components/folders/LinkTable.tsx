@@ -111,8 +111,8 @@ export function LinkTable({ links }: LinkTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Original URL</TableHead>
               <TableHead className="w-[30%]">Short URL</TableHead>
+              <TableHead className="w-[30%]">Original URL</TableHead>
               <TableHead
                 className="w-[15%] cursor-pointer"
                 onClick={() => handleSort("created_at")}

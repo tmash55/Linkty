@@ -2,29 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/libs/supabase/client";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ChevronUp,
   ChevronDown,
-  Edit,
-  BarChart2,
   RefreshCw,
-  Copy,
-  Check,
-  QrCode,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
-import Link from "next/link";
 import {
   Tooltip,
   TooltipContent,
@@ -32,28 +19,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { LinksTableView } from "./LinksTableView";
+import { LinksCardView } from "./LinksCardView";
+import { QRCodeSettings, ShortenedLink, SortField } from "@/types/links";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import QRCodeGenerator from "../QRCodes/QRCodeGenerator";
 
 const SHORT_DOMAIN = process.env.NEXT_PUBLIC_SHORT_DOMAIN || "localhost:3000/s";
-
-type ShortenedLink = {
-  id: string;
-  original_url: string;
-  short_code: string;
-  created_at: string;
-  total_clicks: number;
-  domain: string | null;
-  qr_settings?: QRCodeSettings;
-};
-
-type QRCodeSettings = {
-  bgColor: string;
-  fgColor: string;
-  logoUrl?: string;
-  errorCorrectionLevel: "L" | "M" | "Q" | "H";
-};
-
-type SortField = "created_at" | "total_clicks";
 
 export default function LinksTable() {
   const [links, setLinks] = useState<ShortenedLink[]>([]);
@@ -64,6 +36,7 @@ export default function LinksTable() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
   const supabase = createClient();
 
   useEffect(() => {
@@ -153,7 +126,6 @@ export default function LinksTable() {
         title: "Success",
         description: "QR code settings saved successfully.",
       });
-      // Update the local state
       setLinks(
         links.map((link) =>
           link.id === linkId ? { ...link, qr_settings: settings } : link
@@ -178,206 +150,85 @@ export default function LinksTable() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                variant="outline"
-                size="icon"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                <span className="sr-only">Refresh</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Refresh</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[30%]">Original URL</TableHead>
-                <TableHead className="w-[30%]">Short URL</TableHead>
-                <TableHead
-                  className="w-[15%] cursor-pointer"
-                  onClick={() => handleSort("created_at")}
+          <div className="flex space-x-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setViewMode("table")}
+                  variant={viewMode === "table" ? "default" : "outline"}
+                  size="icon"
                 >
-                  Created At{" "}
-                  {sortField === "created_at" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="inline" />
-                    ) : (
-                      <ChevronDown className="inline" />
-                    ))}
-                </TableHead>
-                <TableHead
-                  className="w-[10%] cursor-pointer"
-                  onClick={() => handleSort("total_clicks")}
+                  <LayoutList className="h-4 w-4" />
+                  <span className="sr-only">Table View</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Table View</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setViewMode("card")}
+                  variant={viewMode === "card" ? "default" : "outline"}
+                  size="icon"
                 >
-                  Clicks{" "}
-                  {sortField === "total_clicks" &&
-                    (sortDirection === "asc" ? (
-                      <ChevronUp className="inline" />
-                    ) : (
-                      <ChevronDown className="inline" />
-                    ))}
-                </TableHead>
-                <TableHead className="w-[15%]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Skeleton className="h-4 w-[250px]" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Skeleton className="h-4 w-[180px]" />
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-[100px]" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-[50px]" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Skeleton className="h-8 w-8 rounded" />
-                        <Skeleton className="h-8 w-8 rounded" />
-                        <Skeleton className="h-8 w-8 rounded" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filteredLinks.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    No links found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredLinks.map((link) => (
-                  <TableRow key={link.id}>
-                    <TableCell className="font-medium">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="truncate block cursor-help max-w-[300px]">
-                            {link.original_url}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-sm">
-                          <p className="break-all">{link.original_url}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <a
-                          href={`http://${SHORT_DOMAIN}/${link.short_code}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          {`${link.domain || SHORT_DOMAIN}/${link.short_code}`}
-                        </a>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                handleCopyLink(
-                                  `${link.domain || SHORT_DOMAIN}/${
-                                    link.short_code
-                                  }`,
-                                  link.id
-                                )
-                              }
-                            >
-                              {copiedLinkId === link.id ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <Copy className="h-4 w-4" />
-                              )}
-                              <span className="sr-only">Copy link</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Copy short URL</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(link.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>{link.total_clicks}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/links/${link.id}/edit`}>
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Edit link</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/links/${link.id}/analytics`}>
-                                <BarChart2 className="h-4 w-4" />
-                                <span className="sr-only">Analytics</span>
-                              </Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>View analytics</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setOpenDialogId(link.id)}
-                            >
-                              <QrCode className="h-4 w-4" />
-                              <span className="sr-only">Generate QR Code</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Generate QR Code</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="sr-only">Card View</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Card View</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  size="icon"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
+                  <span className="sr-only">Refresh</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Refresh</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
+        {viewMode === "table" ? (
+          <LinksTableView
+            links={filteredLinks}
+            isLoading={isLoading}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            handleSort={handleSort}
+            handleCopyLink={handleCopyLink}
+            copiedLinkId={copiedLinkId}
+            setOpenDialogId={setOpenDialogId}
+            SHORT_DOMAIN={SHORT_DOMAIN}
+          />
+        ) : (
+          <LinksCardView
+            links={filteredLinks}
+            isLoading={isLoading}
+            handleCopyLink={handleCopyLink}
+            copiedLinkId={copiedLinkId}
+            setOpenDialogId={setOpenDialogId}
+            SHORT_DOMAIN={SHORT_DOMAIN}
+          />
+        )}
       </div>
       {filteredLinks.map((link) => (
         <Dialog
           key={link.id}
           open={openDialogId === link.id}
-          onOpenChange={() => setOpenDialogId(null)}
+          onOpenChange={(open) => setOpenDialogId(open ? link.id : null)}
         >
           <DialogContent className="max-w-3xl w-full">
             <QRCodeGenerator

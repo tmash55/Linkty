@@ -35,11 +35,20 @@ import { BarChart } from "@/components/ui/chart2";
 import { AnalyticsList } from "@/components/analytics/analytics-list";
 import { LinkClicksChart } from "@/components/analytics/LinkClicksChart";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import { RecentClicks } from "@/components/analytics/recent-clicks";
 
 interface LinkData {
   id: string;
   short_code: string;
   original_url: string;
+}
+interface RecentClick {
+  id: string;
+  created_at: string;
+  browser: string;
+  operating_system: string;
+  city: string;
+  country: string;
 }
 
 interface ClickData {
@@ -142,6 +151,7 @@ export default function LinkAnalyticsPage() {
   const [browsers, setBrowsers] = useState<ChartData[]>([]);
   const [operatingSystems, setOperatingSystems] = useState<ChartData[]>([]);
   const [locations, setLocations] = useState<ChartData[]>([]);
+  const [recentClicks, setRecentClicks] = useState<RecentClick[]>([]);
   const [timeFilter, setTimeFilter] = useState("7");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -211,6 +221,40 @@ export default function LinkAnalyticsPage() {
               (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
             )
         );
+      }
+      // Fetch locations
+      const { data: locationData, error: locationError } = await supabase
+        .from("link_clicks")
+        .select("city, country")
+        .eq("link_id", id)
+        .gte("created_at", timeAgo.toISOString());
+
+      if (locationData && !locationError) {
+        const locationCounts = locationData.reduce((acc, click) => {
+          const location = `${click.city || "Unknown"}, ${
+            click.country || "Unknown"
+          }`;
+          acc[location] = (acc[location] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        setLocations(
+          Object.entries(locationCounts)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+        );
+      }
+      // Fetch recent clicks
+      const { data: recentClicksData, error: recentClicksError } =
+        await supabase
+          .from("link_clicks")
+          .select("id, created_at, browser, operating_system, city, country")
+          .eq("link_id", id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+      if (recentClicksData && !recentClicksError) {
+        setRecentClicks(recentClicksData);
       }
 
       // Fetch referrers
@@ -288,13 +332,6 @@ export default function LinkAnalyticsPage() {
             .slice(0, 5)
         );
       }
-
-      // Fetch locations
-      const { data: locationData, error: locationError } = await supabase
-        .from("link_clicks")
-        .select("country")
-        .eq("link_id", id)
-        .gte("created_at", timeAgo.toISOString());
 
       if (osData && !osError) {
         const osCounts = osData.reduce((acc, click) => {
@@ -537,17 +574,17 @@ export default function LinkAnalyticsPage() {
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="space-y-8 mb-8">
         <LinkClicksChart data={clicksOverTime} timeFilter={timeFilter} />
+        <RecentClicks initialClicks={recentClicks} linkId={id} />
       </div>
 
       <div className="grid gap-8 md:grid-cols-2 mb-8">
         <AnalyticsList
-          title="Operating Systems"
-          items={operatingSystems}
-          getIcon={getOsIcon}
+          title="Referrers"
+          items={referrers}
+          getIcon={getBrowserIcon}
         />
-
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Devices</CardTitle>
@@ -586,17 +623,22 @@ export default function LinkAnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-8 md:grid-cols-3">
         <AnalyticsList
-          title="Referrers"
-          items={referrers}
-          getIcon={getBrowserIcon}
+          title="Operating Systems"
+          items={operatingSystems}
+          getIcon={getOsIcon}
         />
-
         <AnalyticsList
           title="Browsers"
           items={browsers}
           getIcon={getBrowserIcon}
+        />
+        <AnalyticsList
+          title="Top Locations"
+          items={locations}
+          getIcon={() => <Globe className="h-4 w-4 text-muted-foreground" />}
+          isLocation={true}
         />
       </div>
     </div>
