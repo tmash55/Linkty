@@ -1,9 +1,8 @@
-export function generateQRCodeUrl(shortUrl: string): string {
-  // Ensure the shortUrl is a full URL
-  const fullUrl = new URL(
-    shortUrl,
-    process.env.NEXT_PUBLIC_SITE_URL
-  ).toString();
-  // Append the qr=true parameter to the URL
-  return `${fullUrl}${fullUrl.includes("?") ? "&" : "?"}qr=true`;
+export function generateQRCodeUrl(url: string): string {
+  if (!url || typeof url !== "string") {
+    throw new Error("Invalid URL provided");
+  }
+
+  // The URL already contains the short code, so we don't need to modify it
+  return url;
 }

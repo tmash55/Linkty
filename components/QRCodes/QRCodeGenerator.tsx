@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { generateQRCodeUrl } from "@/app/utils/qrCode";
 
 interface QRCodeSettings {
   bgColor: string;
@@ -62,8 +61,15 @@ export default function QRCodeGenerator({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialUrl !== url) {
+      setUrl(initialUrl);
+    }
+  }, [initialUrl]);
 
   const handleSettingsChange = (key: keyof QRCodeSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -90,7 +96,15 @@ export default function QRCodeGenerator({
 
   const handleCopy = async () => {
     const svg = document.getElementById("qr-code");
-    const svgData = new XMLSerializer().serializeToString(svg!);
+    if (!svg) {
+      toast({
+        title: "Error",
+        description: "QR code not found.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const svgData = new XMLSerializer().serializeToString(svg);
     const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
     const item = new ClipboardItem({ "image/svg+xml": blob });
 
@@ -115,7 +129,16 @@ export default function QRCodeGenerator({
   const handleDownload = async (format: "png" | "svg") => {
     setIsLoading(true);
     const svg = document.getElementById("qr-code");
-    const svgData = new XMLSerializer().serializeToString(svg!);
+    if (!svg) {
+      toast({
+        title: "Error",
+        description: "QR code not found.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    const svgData = new XMLSerializer().serializeToString(svg);
 
     try {
       if (format === "svg") {
@@ -169,6 +192,15 @@ export default function QRCodeGenerator({
     }
   };
 
+  const qrCodeValue = useMemo(() => {
+    if (!url) {
+      setQrError("Please enter a valid URL");
+      return "";
+    }
+    setQrError(null);
+    return url;
+  }, [url]);
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -191,31 +223,37 @@ export default function QRCodeGenerator({
               />
             </div>
             <div className="flex justify-center items-center h-64 bg-gray-100 rounded-lg">
-              <QRCodeSVG
-                id="qr-code"
-                value={generateQRCodeUrl(url)}
-                size={256}
-                bgColor={settings.bgColor}
-                fgColor={settings.fgColor}
-                level={settings.errorCorrectionLevel}
-                includeMargin={true}
-                imageSettings={
-                  logoUrl
-                    ? {
-                        src: logoUrl,
-                        height: 24,
-                        width: 24,
-                        excavate: true,
-                      }
-                    : undefined
-                }
-              />
+              {url && !qrError ? (
+                <QRCodeSVG
+                  id="qr-code"
+                  value={qrCodeValue}
+                  size={256}
+                  bgColor={settings.bgColor}
+                  fgColor={settings.fgColor}
+                  level={settings.errorCorrectionLevel}
+                  includeMargin={true}
+                  imageSettings={
+                    logoUrl
+                      ? {
+                          src: logoUrl,
+                          height: 24,
+                          width: 24,
+                          excavate: true,
+                        }
+                      : undefined
+                  }
+                />
+              ) : (
+                <p className="text-red-500">
+                  {qrError || "Please enter a valid URL"}
+                </p>
+              )}
             </div>
             <div className="flex gap-4 justify-center">
               <Button
                 onClick={handleCopy}
                 className="w-full"
-                disabled={isLoading}
+                disabled={isLoading || !!qrError}
                 variant="outline"
               >
                 {isCopied ? (
@@ -229,7 +267,7 @@ export default function QRCodeGenerator({
                 <DropdownMenuTrigger asChild>
                   <Button
                     className="w-full"
-                    disabled={isLoading}
+                    disabled={isLoading || !!qrError}
                     variant="outline"
                   >
                     {isLoading ? (
@@ -259,7 +297,7 @@ export default function QRCodeGenerator({
             <Button
               onClick={handleSave}
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || !!qrError}
               variant="outline"
             >
               {isLoading ? (
@@ -397,7 +435,6 @@ export default function QRCodeGenerator({
                     <SelectContent>
                       <SelectItem value="L">Low</SelectItem>
                       <SelectItem value="M">Medium</SelectItem>
-                      <SelectItem value="Q">Quartile</SelectItem>
                       <SelectItem value="Q">Quartile</SelectItem>
                       <SelectItem value="H">High</SelectItem>
                     </SelectContent>
