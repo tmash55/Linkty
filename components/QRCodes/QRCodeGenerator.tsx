@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { generateQRCodeUrl } from "@/app/utils/qrCode";
 
 interface QRCodeSettings {
   bgColor: string;
@@ -192,7 +193,7 @@ export default function QRCodeGenerator({
             <div className="flex justify-center items-center h-64 bg-gray-100 rounded-lg">
               <QRCodeSVG
                 id="qr-code"
-                value={url}
+                value={generateQRCodeUrl(url)}
                 size={256}
                 bgColor={settings.bgColor}
                 fgColor={settings.fgColor}
@@ -396,6 +397,7 @@ export default function QRCodeGenerator({
                     <SelectContent>
                       <SelectItem value="L">Low</SelectItem>
                       <SelectItem value="M">Medium</SelectItem>
+                      <SelectItem value="Q">Quartile</SelectItem>
                       <SelectItem value="Q">Quartile</SelectItem>
                       <SelectItem value="H">High</SelectItem>
                     </SelectContent>
