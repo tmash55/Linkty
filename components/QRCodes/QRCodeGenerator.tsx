@@ -196,7 +196,12 @@ export default function QRCodeGenerator({
     try {
       console.log("Short URL:", shortUrl);
       console.log("Original URL:", originalUrl);
-      const url = new URL(shortUrl);
+
+      // Ensure the URL has a protocol
+      const urlWithProtocol = shortUrl.startsWith("http")
+        ? shortUrl
+        : `https://${shortUrl}`;
+      const url = new URL(urlWithProtocol);
       url.searchParams.set("qr", "1");
       const finalUrl = url.toString();
       console.log("Generated QR code URL:", finalUrl);
