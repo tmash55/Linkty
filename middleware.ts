@@ -4,6 +4,7 @@ import { updateSession } from "@/libs/supabase/middleware";
 import UAParser from "ua-parser-js";
 import { parseUserAgent } from "./libs/visitorId";
 import { geolocation } from "@vercel/functions";
+
 interface ClickParams {
   p_link_id: string;
   p_referrer: string | null;
@@ -20,6 +21,7 @@ interface ClickParams {
   p_city: string | null;
   p_is_qr_scan: boolean;
 }
+
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
 
@@ -54,7 +56,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
+        set(name: string, value: string, options: CookieOptions) {
           request.cookies.set({
             name,
             value,
@@ -71,7 +73,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
             ...options,
           });
         },
-        remove(name: string, options: any) {
+        remove(name: string, options: CookieOptions) {
           request.cookies.set({
             name,
             value: "",
@@ -218,29 +220,6 @@ async function handleShortLink(request: NextRequest, url: URL) {
   }
 }
 
-async function fetchLinkData(supabase: any, shortCode: string) {
-  const { data, error } = await supabase
-    .from("shortened_links")
-    .select("id, original_url, clicks")
-    .eq("short_code", shortCode)
-    .single();
-
-  if (error) {
-    console.error("Error fetching shortened link:", error);
-    return null;
-  }
-
-  if (!data) {
-    console.log("No data found for short code:", shortCode);
-    return null;
-  }
-
-  console.log("Original URL found:", data.original_url);
-  console.log("Current click count:", data.clicks);
-
-  return data;
-}
-
 function getReferrerInfo(referrer: string | null): {
   type: string;
   url: string | null;
@@ -278,84 +257,6 @@ function getReferrerInfo(referrer: string | null): {
   } catch (error) {
     console.error("Error parsing referrer URL:", error);
     return { type: "invalid", url: referrer };
-  }
-}
-
-function getDeviceType(parsedResult: UAParser.IResult): string {
-  const deviceType = parsedResult.device.type;
-  const cpuArchitecture = parsedResult.cpu.architecture;
-
-  if (deviceType) {
-    switch (deviceType.toLowerCase()) {
-      case "mobile":
-        return "Smartphone";
-      case "tablet":
-        return "Tablet";
-      case "console":
-        return "Gaming Console";
-      case "smarttv":
-        return "Smart TV";
-      case "wearable":
-        return "Wearable Device";
-      case "embedded":
-        return "Embedded Device";
-    }
-  }
-
-  // If device type is not determined, try to infer from OS or CPU
-  if (parsedResult.os.name) {
-    const osName = parsedResult.os.name.toLowerCase();
-    if (
-      osName.includes("android") ||
-      osName.includes("ios") ||
-      osName.includes("windows phone")
-    ) {
-      return "Smartphone";
-    }
-    if (
-      osName.includes("windows") ||
-      osName.includes("mac") ||
-      osName.includes("linux")
-    ) {
-      return cpuArchitecture === "arm" ? "Tablet" : "Desktop";
-    }
-  }
-
-  return "Unknown";
-}
-
-function generateVisitorId(ip: string, userAgent: string): string {
-  const timestamp = Date.now().toString(36);
-  const ipHash = hashCode(ip).toString(36);
-  const uaHash = hashCode(userAgent).toString(36);
-  return `${timestamp}-${ipHash}-${uaHash}`;
-}
-
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash);
-}
-
-async function recordClick(supabase: any, clickParams: any) {
-  console.log("Attempting to record click with dynamic values");
-  console.log("Function parameters:", clickParams);
-
-  const { data: clickData, error: clickError } = await supabase.rpc(
-    "increment_clicks_and_visitors",
-    clickParams
-  );
-
-  if (clickError) {
-    console.error("Error recording click:", clickError);
-    console.error("Error details:", JSON.stringify(clickError, null, 2));
-  } else {
-    console.log("Click recorded successfully");
-    console.log("Click data:", clickData);
   }
 }
 
