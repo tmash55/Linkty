@@ -5,4 +5,5 @@ export interface RecentClick {
   operating_system: string;
   city: string;
   country: string;
+  is_qr_scan: boolean;
 }

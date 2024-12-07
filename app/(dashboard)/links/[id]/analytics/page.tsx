@@ -49,6 +49,7 @@ interface RecentClick {
   operating_system: string;
   city: string;
   country: string;
+  is_qr_scan: boolean;
 }
 
 interface ClickData {
@@ -248,7 +249,9 @@ export default function LinkAnalyticsPage() {
       const { data: recentClicksData, error: recentClicksError } =
         await supabase
           .from("link_clicks")
-          .select("id, created_at, browser, operating_system, city, country")
+          .select(
+            "id, created_at, browser, operating_system, city, country, is_qr_scan"
+          )
           .eq("link_id", id)
           .order("created_at", { ascending: false })
           .limit(5);
