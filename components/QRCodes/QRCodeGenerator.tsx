@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Upload, Copy, Check, Download } from "lucide-react";
+import { Loader2, Upload, Copy, Check, Download, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
@@ -22,13 +22,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface QRCodeSettings {
-  bgColor: string;
-  fgColor: string;
-  logoUrl?: string;
-  errorCorrectionLevel: "L" | "M" | "Q" | "H";
-}
+import { Slider } from "@/components/ui/slider";
+import { QRCodeSettings } from "@/types/links";
 
 interface QRCodeGeneratorProps {
   shortUrl: string;
@@ -50,13 +45,13 @@ export default function QRCodeGenerator({
   initialSettings,
   onSave,
 }: QRCodeGeneratorProps) {
-  const [settings, setSettings] = useState<QRCodeSettings>(
-    initialSettings || {
-      bgColor: "#FFFFFF",
-      fgColor: "#000000",
-      errorCorrectionLevel: "H",
-    }
-  );
+  const [settings, setSettings] = useState<QRCodeSettings>({
+    bgColor: initialSettings?.bgColor || "#FFFFFF",
+    fgColor: initialSettings?.fgColor || "#000000",
+    errorCorrectionLevel: initialSettings?.errorCorrectionLevel || "H",
+    logoSize: initialSettings?.logoSize || 24,
+    logoUrl: initialSettings?.logoUrl,
+  });
   const [logoUrl, setLogoUrl] = useState<string | null>(
     initialSettings?.logoUrl || null
   );
@@ -66,7 +61,10 @@ export default function QRCodeGenerator({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleSettingsChange = (key: keyof QRCodeSettings, value: string) => {
+  const handleSettingsChange = (
+    key: keyof QRCodeSettings,
+    value: string | number
+  ) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -87,6 +85,11 @@ export default function QRCodeGenerator({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+    setSettings((prev) => ({ ...prev, logoUrl: undefined }));
   };
 
   const handleCopy = async () => {
@@ -170,7 +173,12 @@ export default function QRCodeGenerator({
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      await onSave({ ...settings, logoUrl: logoUrl || undefined });
+      const settingsToSave: QRCodeSettings = {
+        ...settings,
+        logoUrl: logoUrl || undefined,
+        logoSize: logoUrl ? settings.logoSize : undefined,
+      };
+      await onSave(settingsToSave);
       toast({
         title: "Settings Saved",
         description: "Your QR code settings have been saved successfully.",
@@ -263,8 +271,8 @@ export default function QRCodeGenerator({
                     logoUrl
                       ? {
                           src: logoUrl,
-                          height: 24,
-                          width: 24,
+                          height: settings.logoSize,
+                          width: settings.logoSize,
                           excavate: true,
                         }
                       : undefined
@@ -410,7 +418,7 @@ export default function QRCodeGenerator({
                   <Label htmlFor="logo" className="text-sm font-medium">
                     Upload Logo
                   </Label>
-                  <div className="mt-1">
+                  <div className="mt-1 space-y-2">
                     <Input
                       id="logo"
                       type="file"
@@ -427,17 +435,48 @@ export default function QRCodeGenerator({
                       <Upload className="mr-2 h-4 w-4" />
                       Choose Logo
                     </Button>
+                    {logoUrl && (
+                      <Button
+                        onClick={handleRemoveLogo}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove Logo
+                      </Button>
+                    )}
                   </div>
                 </div>
-
                 {logoUrl && (
-                  <div className="flex justify-center">
-                    <img
-                      src={logoUrl}
-                      alt="Uploaded logo"
-                      className="max-w-full h-auto max-h-32"
-                    />
-                  </div>
+                  <>
+                    <div className="flex justify-center">
+                      <img
+                        src={logoUrl}
+                        alt="Uploaded logo"
+                        className="max-w-full h-auto max-h-32"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="logoSize" className="text-sm font-medium">
+                        Logo Size
+                      </Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Slider
+                          id="logoSize"
+                          min={16}
+                          max={64}
+                          step={1}
+                          value={[settings.logoSize]}
+                          onValueChange={(value) =>
+                            handleSettingsChange("logoSize", value[0])
+                          }
+                        />
+                        <span className="min-w-[3ch] text-right">
+                          {settings.logoSize}px
+                        </span>
+                      </div>
+                    </div>
+                  </>
                 )}
               </TabsContent>
               <TabsContent value="advanced" className="space-y-4">

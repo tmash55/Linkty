@@ -12,6 +12,7 @@ export type QRCodeSettings = {
   bgColor: string;
   fgColor: string;
   logoUrl?: string;
+  logoSize?: number;
   errorCorrectionLevel: "L" | "M" | "Q" | "H";
 };
 export type SortField = "created_at" | "total_clicks";
