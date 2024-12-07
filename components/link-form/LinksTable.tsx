@@ -243,7 +243,8 @@ export default function LinksTable() {
         >
           <DialogContent className="max-w-3xl w-full">
             <QRCodeGenerator
-              initialUrl={`${link.domain || SHORT_DOMAIN}/${link.short_code}`}
+              shortUrl={`${link.domain || SHORT_DOMAIN}/${link.short_code}`}
+              originalUrl={link.original_url}
               initialSettings={link.qr_settings}
               onSave={(settings) => saveQRSettings(link.id, settings)}
             />

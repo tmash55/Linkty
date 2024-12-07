@@ -31,7 +31,8 @@ interface QRCodeSettings {
 }
 
 interface QRCodeGeneratorProps {
-  initialUrl: string;
+  shortUrl: string;
+  originalUrl: string;
   initialSettings?: QRCodeSettings;
   onSave: (settings: QRCodeSettings) => Promise<void>;
 }
@@ -44,11 +45,11 @@ const colorPresets = [
 ];
 
 export default function QRCodeGenerator({
-  initialUrl,
+  shortUrl,
+  originalUrl,
   initialSettings,
   onSave,
 }: QRCodeGeneratorProps) {
-  const [url, setUrl] = useState(initialUrl);
   const [settings, setSettings] = useState<QRCodeSettings>(
     initialSettings || {
       bgColor: "#FFFFFF",
@@ -64,12 +65,6 @@ export default function QRCodeGenerator({
   const [qrError, setQrError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (initialUrl !== url) {
-      setUrl(initialUrl);
-    }
-  }, [initialUrl]);
 
   const handleSettingsChange = (key: keyof QRCodeSettings, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -193,22 +188,29 @@ export default function QRCodeGenerator({
   };
 
   const qrCodeValue = useMemo(() => {
-    if (!url) {
-      setQrError("Please enter a valid URL");
+    if (!shortUrl) {
+      setQrError("No short URL provided");
       return "";
     }
     setQrError(null);
     try {
-      const shortUrl = new URL(url);
-      // Add the 'qr' parameter to the short URL
-      shortUrl.searchParams.set("qr", "1");
-      return shortUrl.toString();
+      console.log("Short URL:", shortUrl);
+      console.log("Original URL:", originalUrl);
+      const url = new URL(shortUrl);
+      url.searchParams.set("qr", "1");
+      const finalUrl = url.toString();
+      console.log("Generated QR code URL:", finalUrl);
+      return finalUrl;
     } catch (error) {
       console.error("Invalid URL:", error);
       setQrError("Invalid URL format");
-      return url; // Return the original URL if it's invalid
+      return shortUrl;
     }
-  }, [url]);
+  }, [shortUrl, originalUrl]);
+
+  if (qrError) {
+    return <div style={{ color: "red" }}>{qrError}</div>;
+  }
 
   return (
     <Card className="w-full">
@@ -219,20 +221,31 @@ export default function QRCodeGenerator({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-6">
             <div>
-              <Label htmlFor="url" className="text-lg font-semibold">
-                URL
+              <Label htmlFor="originalUrl" className="text-lg font-semibold">
+                Original URL
               </Label>
               <Input
-                id="url"
+                id="originalUrl"
                 type="text"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="Enter URL to generate QR code"
+                value={originalUrl}
+                readOnly
+                className="mt-2"
+              />
+            </div>
+            <div>
+              <Label htmlFor="shortUrl" className="text-lg font-semibold">
+                Short URL
+              </Label>
+              <Input
+                id="shortUrl"
+                type="text"
+                value={shortUrl}
+                readOnly
                 className="mt-2"
               />
             </div>
             <div className="flex justify-center items-center h-64 bg-gray-100 rounded-lg">
-              {url && !qrError ? (
+              {shortUrl && !qrError ? (
                 <QRCodeSVG
                   id="qr-code"
                   value={qrCodeValue}
@@ -411,6 +424,7 @@ export default function QRCodeGenerator({
                     </Button>
                   </div>
                 </div>
+
                 {logoUrl && (
                   <div className="flex justify-center">
                     <img
