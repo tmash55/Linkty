@@ -161,7 +161,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
 
     // Record click and update visitor count
     const { data: clickData, error: clickError } = await supabase.rpc(
-      "increment_clicks_and_visitors_with_location_and_qr",
+      "insert_link_click",
       clickParams
     );
 
