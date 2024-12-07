@@ -159,6 +159,8 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_is_qr_scan: isQRScan,
     };
 
+    console.log("Click parameters:", JSON.stringify(clickParams, null, 2));
+
     // Record click and update visitor count
     const { data: clickData, error: clickError } = await supabase.rpc(
       "insert_link_click",
