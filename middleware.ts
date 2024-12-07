@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { updateSession } from "@/libs/supabase/middleware";
-import UAParser from "ua-parser-js";
 import { parseUserAgent } from "./libs/visitorId";
 import { geolocation } from "@vercel/functions";
 
@@ -102,6 +101,7 @@ async function handleShortLink(request: NextRequest, url: URL) {
       .single();
 
     if (linkError || !linkData) {
+      console.error(`Link not found for short code: ${shortCode}`);
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/404`);
     }
 
@@ -159,7 +159,8 @@ async function handleShortLink(request: NextRequest, url: URL) {
       p_is_qr_scan: isQRScan,
     };
 
-    console.log("Click parameters:", JSON.stringify(clickParams, null, 2));
+    console.log(`Processing link: ${shortCode}, QR Scan: ${isQRScan}`);
+    console.log(`Click parameters: ${JSON.stringify(clickParams, null, 2)}`);
 
     // Record click and update visitor count
     const { data: clickData, error: clickError } = await supabase.rpc(
@@ -169,13 +170,13 @@ async function handleShortLink(request: NextRequest, url: URL) {
 
     if (clickError) {
       console.error(
-        "Error recording click and updating visitor count:",
-        clickError
+        `Error recording click for ${shortCode}:`,
+        JSON.stringify(clickError, null, 2)
       );
     } else {
       console.log(
-        "Click recorded and visitor count updated successfully:",
-        clickData
+        `Click recorded successfully for ${shortCode}:`,
+        JSON.stringify(clickData, null, 2)
       );
     }
 
@@ -200,8 +201,8 @@ async function handleShortLink(request: NextRequest, url: URL) {
       console.log("Visitor session managed successfully");
     }
 
-    // Set redirect response
-    const redirectResponse = NextResponse.redirect(linkData.original_url);
+    // Create redirect response
+    const redirectResponse = NextResponse.redirect(linkData.original_url, 302);
 
     // Copy cookies to redirect response
     redirectResponse.cookies.set("sessionId", sessionId, {
@@ -215,9 +216,10 @@ async function handleShortLink(request: NextRequest, url: URL) {
       sameSite: "strict",
     });
 
+    console.log(`Redirecting to: ${linkData.original_url}`);
     return redirectResponse;
   } catch (error) {
-    console.error("Unexpected error in middleware:", error);
+    console.error(`Unexpected error for ${shortCode}:`, error);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/error`);
   }
 }
