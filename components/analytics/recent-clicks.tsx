@@ -102,7 +102,7 @@ export function RecentClicks({ initialClicks, linkId }: RecentClicksProps) {
             <TableRow>
               <TableCell>Location</TableCell>
               <TableCell>Browser & OS</TableCell>
-              <TableCell>Type</TableCell>
+              <TableCell>Event Type</TableCell>
               <TableCell className="text-right">Time</TableCell>
             </TableRow>
           </TableHeader>

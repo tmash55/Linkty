@@ -143,18 +143,6 @@ export function LinkTable({ links }: LinkTableProps) {
           <TableBody>
             {filteredLinks.map((link) => (
               <TableRow key={link.id}>
-                <TableCell className="font-medium">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="truncate block cursor-help max-w-[300px]">
-                        {link.original_url}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-sm">
-                      <p className="break-all">{link.original_url}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <a
@@ -195,6 +183,19 @@ export function LinkTable({ links }: LinkTableProps) {
                     </Tooltip>
                   </div>
                 </TableCell>
+                <TableCell className="font-medium">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="truncate block cursor-help max-w-[300px]">
+                        {link.original_url}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-sm">
+                      <p className="break-all">{link.original_url}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TableCell>
+
                 <TableCell>
                   {new Date(link.created_at).toLocaleDateString()}
                 </TableCell>

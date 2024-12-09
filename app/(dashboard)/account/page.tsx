@@ -244,13 +244,6 @@ export default function AccountPage() {
                         Light
                       </div>
                     </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center">
-                        <Moon className="mr-2 h-4 w-4" />
-                        Dark
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">System</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

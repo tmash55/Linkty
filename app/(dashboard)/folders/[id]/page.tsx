@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Calendar,
-  Link as LinkIcon,
+  LinkIcon,
   BarChart2,
   ArrowUpRight,
   Plus,
@@ -63,9 +63,18 @@ export default function FolderPage() {
       setError("Folder not found");
     } else {
       setFolderData(data);
-      fetchFolderStats(
-        data.shortened_links.map((link: { id: any }) => link.id)
-      );
+      if (data.shortened_links && data.shortened_links.length > 0) {
+        fetchFolderStats(
+          data.shortened_links.map((link: { id: any }) => link.id)
+        );
+      } else {
+        setStats({
+          total_clicks: 0,
+          os_stats: {},
+          browser_stats: {},
+          clicks_over_time: [],
+        });
+      }
     }
 
     setIsLoading(false);
@@ -129,14 +138,16 @@ export default function FolderPage() {
   const browsers = prepareChartData(stats?.browser_stats);
   const clicksOverTime = stats?.clicks_over_time || [];
 
-  const topPerformingLink = folderData.shortened_links.reduce(
-    (max: { clicks: number }, link: { clicks: number }) =>
-      link.clicks > max.clicks ? link : max,
-    folderData.shortened_links[0]
-  );
+  const topPerformingLink =
+    folderData.shortened_links && folderData.shortened_links.length > 0
+      ? folderData.shortened_links.reduce(
+          (max: { clicks: number }, link: { clicks: number }) =>
+            link.clicks > max.clicks ? link : max,
+          folderData.shortened_links[0]
+        )
+      : null;
 
-  const SHORT_DOMAIN =
-    process.env.NEXT_PUBLIC_SHORT_DOMAIN || "localhost:3000/s";
+  const shortDomain = process.env.NEXT_PUBLIC_SHORT_DOMAIN || "localhost:3000";
 
   return (
     <main className="container mx-auto py-8">
@@ -152,7 +163,9 @@ export default function FolderPage() {
         <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Total Links"
-            value={folderData.shortened_links.length}
+            value={
+              folderData.shortened_links ? folderData.shortened_links.length : 0
+            }
             icon={LinkIcon}
           />
           <StatCard
@@ -167,10 +180,16 @@ export default function FolderPage() {
           />
           <StatCard
             title="Top Performing Link"
-            value={`${topPerformingLink.clicks} clicks`}
-            description={`${
-              topPerformingLink.domains?.domain || SHORT_DOMAIN
-            }/${topPerformingLink.short_code}`}
+            value={
+              topPerformingLink ? `${topPerformingLink.clicks} clicks` : "N/A"
+            }
+            description={
+              topPerformingLink
+                ? `${topPerformingLink.domains?.domain || shortDomain}/${
+                    topPerformingLink.short_code
+                  }`
+                : "No links in this folder"
+            }
             icon={ArrowUpRight}
           />
         </div>
@@ -198,7 +217,12 @@ export default function FolderPage() {
             <CardTitle>Links in this folder</CardTitle>
           </CardHeader>
           <CardContent>
-            <LinkTable links={folderData.shortened_links} />
+            {folderData.shortened_links &&
+            folderData.shortened_links.length > 0 ? (
+              <LinkTable links={folderData.shortened_links} />
+            ) : (
+              <p>No links in this folder yet. Add a link to get started!</p>
+            )}
           </CardContent>
         </Card>
       </div>
